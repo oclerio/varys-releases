@@ -45,10 +45,14 @@ read -r VER DMG_URL <<EOF2
 $(printf '%s' "$INFO" | /usr/bin/python3 -c '
 import json, sys
 d = json.load(sys.stdin)
+import re
 ver = (d.get("tag_name") or "").lstrip("v")
-url = next((a["browser_download_url"] for a in d.get("assets", [])
-            if a["name"].endswith(".dmg")), "")
-print(ver, url)')
+dmg = next((a for a in d.get("assets", []) if a["name"].endswith(".dmg")), None)
+url = dmg["browser_download_url"] if dmg else ""
+# a versao do Mac e a do ARQUIVO (Varys-Monitor_<v>_aarch64.dmg): uma release do
+# Windows pode carregar o .dmg anterior do Mac, e a tag mentiria (21/11/2026)
+m = re.search(r"_(\d+(?:\.\d+)+)_", dmg["name"]) if dmg else None
+print(m.group(1) if m else ver, url)')
 EOF2
 [ -n "$VER" ] || fail "a release respondeu sem versão."
 [ -n "$DMG_URL" ] || fail "a release $VER ainda não tem o instalador do macOS."
